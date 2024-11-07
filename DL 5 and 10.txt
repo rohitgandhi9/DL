@@ -1,0 +1,234 @@
+Object detection using Transfer Learning of CNN architectures: a) Load in a pre-trained CNN
+model trained on a large dataset b) Freeze parameters (weights) in model’s lower convolutional
+layers c) Add custom classifier with several layers of trainable parameters to model d) Train
+classifier layers on training data available for task e) Fine-tune hyper parameters and unfreeze
+more layers as needed
+
+1. from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# Define directories for training and testing data
+train_dir = 'dataset/mnist-jpg/mnist-jpg/train/'
+test_dir = 'dataset/mnist-jpg/mnist-jpg/test/'
+
+# Set up an ImageDataGenerator with rescaling
+img_gen = ImageDataGenerator(rescale=1.0 / 255)
+
+# Load training data
+data_gen = img_gen.flow_from_directory(
+    train_dir,
+    target_size=(32, 32),
+    batch_size=5000,
+    shuffle=True,
+    class_mode='categorical'
+)
+
+# Extract training and testing data
+x_train, y_train = data_gen[0]
+x_test, y_test = data_gen[2]
+
+2. from tensorflow.keras.applications import VGG16
+
+# Path to pre-trained weights (make sure this file exists in the specified path)
+path = 'dataset/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
+
+# Load the VGG16 model without top layers, which are classification layers
+vgg_model = VGG16(weights=path, include_top=False, input_shape=(32, 32, 3))
+
+# Freeze all layers in the VGG16 model
+for layer in vgg_model.layers:
+    layer.trainable = False
+
+3. from tensorflow import keras
+from tensorflow.keras.layers import Dense, Flatten, Dropout
+
+# Define custom classifier layers
+custom_classifier = keras.Sequential([
+    Flatten(input_shape=(1, 1, 512)),
+    Dense(100, activation='relu'),
+    Dropout(0.2),
+    Dense(100, activation='relu'),
+    Dropout(0.2),
+    Dense(10, activation='softmax')
+])
+
+# Combine VGG16 model with the custom classifier
+model = keras.Sequential([
+    vgg_model,
+    custom_classifier
+])
+
+4. # Compile model with Adam optimizer
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model for 1 epoch (use more epochs for better accuracy)
+model.fit(x_train, y_train, batch_size=100, epochs=1, validation_data=(x_test, y_test))
+
+5. # Unfreeze the last four layers in VGG16 model for fine-tuning
+for layer in vgg_model.layers[:-4]:
+    layer.trainable = True
+
+# Re-compile the model to apply new trainable settings
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Fine-tune with a lower batch size for 1 epoch
+model.fit(x_train, y_train, batch_size=1000, epochs=1, validation_data=(x_test, y_test))
+
+ 6. # Evaluate the model on the test set
+loss, acc = model.evaluate(x_test, y_test)
+print("Test Loss:", loss)
+print("Test Accuracy:", acc)
+
+# Make predictions on the test data
+pred = model.predict(x_test)
+
+# Plot an example image with its predicted label
+import matplotlib.pyplot as plt
+import numpy as np
+
+labels = list(data_gen.class_indices.keys())
+plt.imshow(x_test[10])
+plt.title(f"Predicted: {str(labels[np.argmax(pred[10])])}")
+print("Actual:", str(labels[np.argmax(y_test[10])]))
+
+
+
+
+
+
+Part 1: Import Libraries and Setup Data Generators
+This part involves importing the necessary libraries and setting up data generators for loading the image dataset.
+
+python
+Copy code
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# Define directories for training and testing data
+train_dir = 'dataset/mnist-jpg/mnist-jpg/train/'
+test_dir = 'dataset/mnist-jpg/mnist-jpg/test/'
+
+# Set up an ImageDataGenerator with rescaling
+img_gen = ImageDataGenerator(rescale=1.0 / 255)
+
+# Load training data
+data_gen = img_gen.flow_from_directory(
+    train_dir,
+    target_size=(32, 32),
+    batch_size=5000,
+    shuffle=True,
+    class_mode='categorical'
+)
+
+# Extract training and testing data
+x_train, y_train = data_gen[0]
+x_test, y_test = data_gen[2]
+Explanation:
+
+The ImageDataGenerator resizes pixel values to [0, 1] range.
+flow_from_directory loads images from the specified directory, resizes them to 32x32, and labels them categorically.
+Part 2: Load Pre-trained VGG16 Model and Freeze Layers
+This part loads the VGG16 model with pre-trained weights and freezes all layers to use them as feature extractors.
+
+python
+Copy code
+from tensorflow.keras.applications import VGG16
+
+# Path to pre-trained weights (make sure this file exists in the specified path)
+path = 'dataset/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
+
+# Load the VGG16 model without top layers, which are classification layers
+vgg_model = VGG16(weights=path, include_top=False, input_shape=(32, 32, 3))
+
+# Freeze all layers in the VGG16 model
+for layer in vgg_model.layers:
+    layer.trainable = False
+Explanation:
+
+VGG16 is used with weights from path and no top layer.
+Freezing layers prevents updates during training, ensuring only custom layers are trained.
+Part 3: Add a Custom Classifier
+Here, we define a custom classifier that will be trained on the MNIST data.
+
+python
+Copy code
+from tensorflow import keras
+from tensorflow.keras.layers import Dense, Flatten, Dropout
+
+# Define custom classifier layers
+custom_classifier = keras.Sequential([
+    Flatten(input_shape=(1, 1, 512)),
+    Dense(100, activation='relu'),
+    Dropout(0.2),
+    Dense(100, activation='relu'),
+    Dropout(0.2),
+    Dense(10, activation='softmax')
+])
+
+# Combine VGG16 model with the custom classifier
+model = keras.Sequential([
+    vgg_model,
+    custom_classifier
+])
+Explanation:
+
+Flatten layer reshapes the VGG16 output.
+Dense layers add non-linearity, while Dropout helps prevent overfitting.
+The final layer has 10 nodes (one per class) with softmax activation.
+Part 4: Compile and Train the Model
+This section compiles and trains the model initially with only custom layers.
+
+python
+Copy code
+# Compile model with Adam optimizer
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model for 1 epoch (use more epochs for better accuracy)
+model.fit(x_train, y_train, batch_size=100, epochs=1, validation_data=(x_test, y_test))
+Explanation:
+
+The model uses categorical_crossentropy loss as it’s a multi-class problem.
+The accuracy metric helps evaluate performance on the validation data.
+Part 5: Fine-tune by Unfreezing Additional Layers
+This section unlocks a few VGG16 layers for fine-tuning to improve accuracy.
+
+python
+Copy code
+# Unfreeze the last four layers in VGG16 model for fine-tuning
+for layer in vgg_model.layers[:-4]:
+    layer.trainable = True
+
+# Re-compile the model to apply new trainable settings
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Fine-tune with a lower batch size for 1 epoch
+model.fit(x_train, y_train, batch_size=1000, epochs=1, validation_data=(x_test, y_test))
+Explanation:
+
+Unfreezing some convolutional layers allows the model to learn features more specific to the dataset.
+Fine-tuning is crucial for improving model performance on new data.
+Part 6: Evaluate Model and Make Predictions
+Finally, evaluate the model’s performance on the test data and make predictions.
+
+python
+Copy code
+# Evaluate the model on the test set
+loss, acc = model.evaluate(x_test, y_test)
+print("Test Loss:", loss)
+print("Test Accuracy:", acc)
+
+# Make predictions on the test data
+pred = model.predict(x_test)
+
+# Plot an example image with its predicted label
+import matplotlib.pyplot as plt
+import numpy as np
+
+labels = list(data_gen.class_indices.keys())
+plt.imshow(x_test[10])
+plt.title(f"Predicted: {str(labels[np.argmax(pred[10])])}")
+print("Actual:", str(labels[np.argmax(y_test[10])]))
+Explanation:
+
+evaluate provides accuracy and loss on the test set.
+predict generates predictions, which are visualized alongside actual labels.
+
+

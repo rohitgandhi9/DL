@@ -1,0 +1,198 @@
+Implement the Continuous Bag of Words (CBOW) Model. Stages can be: 
+    a. Data preparation 
+    b. Generate training data 
+    c. Train model 
+    d. Output
+
+1. from tensorflow.keras.preprocessing import text
+from tensorflow.keras.utils import to_categorical, pad_sequences
+# from tensorflow.keras.utils import np_utils
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Embedding, Lambda
+import tensorflow.keras.backend as K
+import numpy as np
+import pandas as pd
+from sklearn.metrics.pairwise import euclidean_distances
+
+2. #taking random sentences as data
+data = """Deep learning (also known as deep structured learning) is part of a broader family of machine learning methods based on artificial neural networks with representation learning. Learning can be supervised, semi-supervised or unsupervised. 
+Deep-learning architectures such as deep neural networks, deep belief networks, deep reinforcement learning, recurrent neural networks, convolutional neural networks and Transformers have been applied to fields including computer vision, speech recognition, natural language processing, machine translation, bioinformatics, drug design, medical image analysis, climate science, material inspection and board game programs, where they have produced results comparable to and in some cases surpassing human expert performance.
+"""
+dl_data = data.split()
+
+3. #tokenization
+tokenizer = text.Tokenizer()
+tokenizer.fit_on_texts(dl_data)
+word2id = tokenizer.word_index
+
+word2id['PAD'] = 0
+id2word = {v:k for k, v in word2id.items()}
+wids = [[word2id[w] for w in text.text_to_word_sequence(doc)] for doc in dl_data]
+
+vocab_size = len(word2id)
+embed_size = 100
+window_size = 2 
+
+print('Vocabulary Size:', vocab_size)
+print('Vocabulary Sample:', list(word2id.items())[:10])
+ans. Vocabulary Size: 75
+Vocabulary Sample: [('learning', 1), ('deep', 2), ('networks', 3), ('neural', 4), ('and', 5), ('as', 6), ('of', 7), ('machine', 8), ('supervised', 9), ('have', 10)
+
+4. # generating (context word, target/label word) pairs
+def generate_context_word_pairs(corpus, window_size, vocab_size):
+    context_length = window_size * 2
+    for words in corpus:
+        sentence_length = len(words)
+        for index, word in enumerate(words):
+            context_words = []
+            label_word = []
+            start = index - window_size
+            end = index + window_size + 1
+
+            context_words.append([words[i]
+                                  for i in range(start, end)
+                                  if 0 <= i < sentence_length
+                                  and i != index])
+            label_word.append(word)
+
+            x = pad_sequences(context_words, maxlen=context_length)
+            y = to_categorical(label_word, vocab_size)  # Corrected this line
+            yield (x, y)
+
+# Testing the function
+i = 0
+for x, y in generate_context_word_pairs(corpus=wids, window_size=window_size, vocab_size=vocab_size):
+    if 0 not in x[0]:
+        # Uncomment the line below to print output if needed
+        # print('Context (X):', [id2word[w] for w in x[0]], '-> Target (Y):', id2word[np.argmax(y[0])])
+
+        if i == 10:
+            break
+        i += 1
+
+
+5. import tensorflow.keras.backend as K
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Embedding, Lambda
+
+# Model Building
+cbow = Sequential()
+cbow.add(Embedding(input_dim=vocab_size, output_dim=embed_size))
+cbow.add(Lambda(lambda x: K.mean(x, axis=1), output_shape=(embed_size,)))
+cbow.add(Dense(vocab_size, activation='softmax'))
+cbow.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+
+# To build the model, pass a dummy input through it
+cbow.build(input_shape=(None, window_size * 2))
+
+print(cbow.summary())
+ans. 
+Model: "sequential_2"
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃ Layer (type)                         ┃ Output Shape                ┃         Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ embedding_1 (Embedding)              │ (None, 4, 100)              │           7,500 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ lambda_1 (Lambda)                    │ (None, 100)                 │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dense_1 (Dense)                      │ (None, 75)                  │           7,575 │
+└──────────────────────────────────────┴─────────────────────────────┴─────────────────┘
+ Total params: 15,075 (58.89 KB)
+ Trainable params: 15,075 (58.89 KB)
+ Non-trainable params: 0 (0.00 B)
+None
+
+6. # Testing with the full dataset and multiple epochs
+for epoch in range(1, 6):  # Run for 5 epochs as in the expected output
+    loss = 0.
+    i = 0
+    for x, y in generate_context_word_pairs(corpus=wids, window_size=window_size, vocab_size=vocab_size):  # Use the full dataset
+        i += 1
+        x_tensor = tf.convert_to_tensor(x)
+        y_tensor = tf.convert_to_tensor(y)
+        
+        # Perform training step and get the loss value
+        loss_value = cbow.train_on_batch(x_tensor, y_tensor)
+        
+        # Check if loss_value is a NumPy array or tensor
+        if isinstance(loss_value, np.ndarray):
+            loss += loss_value.item()  # Convert numpy.ndarray to a scalar value
+        else:
+            loss += loss_value.numpy() if tf.executing_eagerly() else loss_value
+
+        if i % 100 == 0:  # Print progress every 100 pairs for visibility
+            print('Processed {} (context, word) pairs'.format(i))
+
+        # You can increase this number depending on the size of your dataset
+        # if i >= 10000:  # Limit to a certain number of pairs if dataset is large
+        #     break
+
+    print('Epoch:', epoch, '\tLoss:', loss)
+    print()
+ans. 
+Processed 100 (context, word) pairs
+Epoch: 1 	Loss: 430.544367313385
+
+Processed 100 (context, word) pairs
+Epoch: 2 	Loss: 428.6736192703247
+
+Processed 100 (context, word) pairs
+Epoch: 3 	Loss: 426.86804962158203
+
+Processed 100 (context, word) pairs
+Epoch: 4 	Loss: 425.37102460861206
+
+Processed 100 (context, word) pairs
+Epoch: 5 	Loss: 424.19560050964355
+
+7. weights = cbow.get_weights()[0]
+weights = weights[1:]
+print(weights.shape)
+
+pd.DataFrame(weights, index=list(id2word.values())[1:]).head()
+ans. 
+(74, 100)
+0	1	2	3	4	5	6	7	8	9	...	90	91	92	93	94	95	96	97	98	99
+deep	-0.043009	-0.039407	0.032078	-0.068844	-0.028309	-0.025992	-0.024843	0.022763	-0.011969	0.023407	...	0.007163	-0.011812	0.046342	0.058335	-0.034378	0.010029	0.051192	0.012166	-0.019744	0.027873
+networks	-0.045893	0.026621	0.022782	-0.014854	-0.001296	-0.022452	0.014465	-0.047539	-0.064754	0.049488	...	-0.022522	0.019654	-0.008186	0.064495	-0.038927	0.006889	0.011297	-0.017547	0.001659	-0.047880
+neural	-0.040234	-0.032783	0.020191	-0.029792	-0.034877	-0.048285	-0.011161	0.031417	0.019662	-0.037558	...	-0.040735	0.006947	-0.002891	-0.048345	0.001559	0.046327	0.009911	-0.047611	-0.023143	0.047060
+and	-0.026636	-0.034177	-0.029245	0.018415	-0.023670	0.012551	0.033722	-0.003554	0.040674	-0.027338	...	0.027293	-0.040418	0.040676	-0.004565	-0.043606	-0.007796	-0.022879	0.028053	0.011313	-0.046118
+as	-0.026861	-0.021620	-0.033485	0.014704	0.035434	0.038778	-0.014904	0.005680	-0.006709	0.001870	...	-0.003871	-0.015591	-0.007125	-0.020634	-0.007895	-0.021196	-0.011400	-0.019782	0.035315	0.028719
+5 rows × 100 columns
+
+8. from sklearn.metrics.pairwise import euclidean_distances
+
+distance_matrix = euclidean_distances(weights)
+print(distance_matrix.shape)
+
+similar_words = {search_term: [id2word[idx] for idx in distance_matrix[word2id[search_term]-1].argsort()[1:6]+1] 
+                   for search_term in ['deep']}
+
+similar_words
+
+ans. 
+(74, 74)
+{'deep': ['translation', 'including', 'as', 'surpassing', 'semi']}
+
+
+
+
+Your implementation of the Continuous Bag of Words (CBOW) model is well-structured and covers the essential stages required for training and using the model. Here's a brief walkthrough and the flow of the code:
+
+1. Data Preparation
+You begin by tokenizing a sample text, splitting it into words, and assigning indices to each unique word using Keras' Tokenizer. You also generate mappings from words to their corresponding IDs (word2id) and reverse mappings (id2word), which will help in converting back and forth between words and IDs.
+
+2. Generate Training Data
+The function generate_context_word_pairs() generates training data by pairing context words (within a specified window size) with the target word. This is essential for training the CBOW model, where the context words are used to predict the target word.
+
+3. Model Building
+The CBOW model is built using Keras. It uses an embedding layer to learn word embeddings, a Lambda layer to average the embeddings of the context words, and a dense layer with a softmax activation to predict the target word. This model is compiled using the categorical_crossentropy loss function and the rmsprop optimizer.
+
+4. Model Training
+The model is trained in a loop over multiple epochs, where it processes the context-target pairs in batches. The train_on_batch() method is used to train the model incrementally. The loss for each epoch is accumulated and printed, showing the model's progress.
+
+5. Model Weights
+After training, the weights of the embedding layer are retrieved, and a DataFrame is created to display the learned embeddings for each word in the vocabulary. This is helpful for understanding how words are represented in the vector space.
+
+6. Word Similarity
+Finally, you calculate the Euclidean distance between word vectors to find the most similar words to a given search term (e.g., "deep"). The resulting words are displayed, demonstrating the model's ability to capture word similarities based on context.

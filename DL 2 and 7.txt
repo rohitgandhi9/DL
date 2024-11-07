@@ -1,0 +1,145 @@
+Build the Image classification model by dividing the model into following 4 stages: 
+a. Loading and preprocessing the image data 
+b. Defining the model’s architecture 
+c. Training the model 
+d. Estimating the model’s performance
+
+1. #importing the libraries
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras import datasets, layers, models
+
+2. #grabbing CIFAR10 dataset
+(train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
+train_images, test_images = train_images / 255.0, test_images / 255.0
+
+
+3. #showing images of mentioned categories
+class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer','dog', 'frog', 'horse', 'ship', 'truck']
+
+plt.figure(figsize=(10,10))
+for i in range(10):
+    plt.subplot(5,5,i+1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.grid(False)
+    plt.imshow(train_images[i])
+    plt.xlabel(class_names[train_labels[i][0]])
+plt.show()
+
+4. #building CNN model
+model = models.Sequential()
+model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.Flatten())
+model.add(layers.Dense(64, activation='relu'))
+model.add(layers.Dense(10))
+
+model.summary()
+
+ans. 
+Model: "sequential_1"
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃ Layer (type)                         ┃ Output Shape                ┃         Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ conv2d_3 (Conv2D)                    │ (None, 30, 30, 32)          │             896 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ max_pooling2d_2 (MaxPooling2D)       │ (None, 15, 15, 32)          │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ conv2d_4 (Conv2D)                    │ (None, 13, 13, 64)          │          18,496 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ max_pooling2d_3 (MaxPooling2D)       │ (None, 6, 6, 64)            │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ conv2d_5 (Conv2D)                    │ (None, 4, 4, 64)            │          36,928 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ flatten_1 (Flatten)                  │ (None, 1024)                │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dense_2 (Dense)                      │ (None, 64)                  │          65,600 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dense_3 (Dense)                      │ (None, 10)                  │             650 │
+└──────────────────────────────────────┴─────────────────────────────┴─────────────────┘
+ Total params: 122,570 (478.79 KB)
+ Trainable params: 122,570 (478.79 KB)
+ Non-trainable params: 0 (0.00 B)
+
+5. #model compilation
+model.compile(optimizer='adam',loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics=['accuracy'])
+epochs = 1
+h = model.fit(train_images, train_labels, epochs=epochs, validation_data=(test_images, test_labels)) 
+ans. 
+1563/1563 ━━━━━━━━━━━━━━━━━━━━ 10398s 7s/step - accuracy: 0.3568 - loss: 1.7321 - val_accuracy: 0.5458 - val_loss: 1.2601
+
+
+
+
+
+
+Stage 1: Loading and Preprocessing the Image Data
+python
+Copy code
+# importing the libraries
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras import datasets, layers, models
+
+# grabbing CIFAR10 dataset
+(train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
+train_images, test_images = train_images / 255.0, test_images / 255.0
+In this stage, we import the necessary libraries and load the CIFAR-10 dataset, which contains 60,000 32x32 color images in 10 classes. We normalize the pixel values to the range [0, 1] by dividing by 255.0.
+
+Stage 2: Defining the Model’s Architecture
+python
+Copy code
+# showing images of mentioned categories
+class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer','dog', 'frog', 'horse', 'ship', 'truck']
+
+plt.figure(figsize=(10,10))
+for i in range(10):
+    plt.subplot(5,5,i+1)
+    plt.xticks([])  # Hide ticks
+    plt.yticks([])  # Hide ticks
+    plt.grid(False)
+    plt.imshow(train_images[i])
+    plt.xlabel(class_names[train_labels[i][0]])
+plt.show()
+
+# building CNN model
+model = models.Sequential()
+model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.Flatten())
+model.add(layers.Dense(64, activation='relu'))
+model.add(layers.Dense(10))
+
+model.summary()
+In this stage, the CIFAR-10 images are visualized. The convolutional neural network (CNN) architecture consists of:
+
+Three convolutional layers (Conv2D), each followed by a max-pooling layer (MaxPooling2D).
+A flatten layer to convert the 2D output of the last convolutional layer to a 1D vector.
+A fully connected layer (Dense) with 64 units, followed by the final output layer with 10 units (one for each class).
+Stage 3: Training the Model
+python
+Copy code
+# model compilation
+model.compile(optimizer='adam', loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=['accuracy'])
+epochs = 1
+h = model.fit(train_images, train_labels, epochs=epochs, validation_data=(test_images, test_labels))
+We compile the model using the Adam optimizer and sparse categorical cross-entropy loss function. The model is trained for 1 epoch (you can increase this number for better accuracy). The training process includes validation on the test set after each epoch.
+
+Stage 4: Estimating the Model’s Performance
+After training, the model’s performance is displayed:
+
+yaml
+Copy code
+1563/1563 ━━━━━━━━━━━━━━━━━━━━ 10398s 7s/step - accuracy: 0.3568 - loss: 1.7321 - val_accuracy: 0.5458 - val_loss: 1.2601
+Training accuracy: 35.68%
+Training loss: 1.7321
+Validation accuracy: 54.58%
+Validation loss: 1.2601
+You can further improve the model by adjusting hyperparameters, using data augmentation, or adding dropout layers.

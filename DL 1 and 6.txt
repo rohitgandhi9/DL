@@ -1,0 +1,186 @@
+Implement Feedforward neural networks with Keras and TensorFlow.
+a) Import the necessary packages. b) Load the training and testing data (MNIST/CIFAR10)
+c) Define the network architecture using Keras. d)Train the model using SGD. e) Evaluate the
+network. f) Plot the training loss and accuracy
+
+
+1. from sklearn.preprocessing import LabelBinarizer
+from sklearn.metrics import classification_report
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.datasets import mnist
+import matplotlib.pyplot as plt
+import numpy as np
+
+2. # Load and preprocess the MNIST dataset
+((X_train, Y_train), (X_test, Y_test)) = mnist.load_data()
+X_train = X_train.reshape((X_train.shape[0], 28 * 28)).astype("float32") / 255.0
+X_test = X_test.reshape((X_test.shape[0], 28 * 28)).astype("float32") / 255.0
+
+3. # Convert labels to one-hot encoding
+lb = LabelBinarizer()
+Y_train = lb.fit_transform(Y_train)
+Y_test = lb.transform(Y_test)
+
+4. # Build the neural network model
+# model = Sequential([
+#     Dense(128, input_shape=(784,), activation="sigmoid"),
+#     Dense(64, activation="sigmoid"),
+#     Dense(10, activation="softmax")
+# ])
+model = Sequential()
+model.add(Input(shape=(784,)))  # Specify input shape here using Input layer
+model.add(Dense(128, activation="sigmoid"))
+model.add(Dense(64, activation="sigmoid"))
+model.add(Dense(10, activation="softmax"))
+
+5. # Compile the model
+sgd = SGD(0.01)
+model.compile(loss="categorical_crossentropy", optimizer=sgd, metrics=["accuracy"])
+
+6. # Train the model
+epochs = 10
+H = model.fit(X_train, Y_train, validation_data=(X_test, Y_test), epochs=epochs, batch_size=128)
+
+7. # Evaluate the model and print classification report
+predictions = model.predict(X_test, batch_size=128)
+print(classification_report(Y_test.argmax(axis=1), predictions.argmax(axis=1), target_names=[str(x) for x in lb.classes_]))
+
+8. # Plot the training loss and accuracy
+plt.style.use("ggplot")
+plt.figure()
+plt.plot(np.arange(0, epochs), H.history["loss"], label="train_loss")
+plt.plot(np.arange(0, epochs), H.history["val_loss"], label="val_loss")
+plt.plot(np.arange(0, epochs), H.history["accuracy"], label="train_acc")
+plt.plot(np.arange(0, epochs), H.history["val_accuracy"], label="val_acc")
+plt.title("Training Loss and Accuracy")
+plt.xlabel("Epoch #")
+plt.ylabel("Loss/Accuracy")
+plt.legend()
+plt.show()
+
+
+
+
+
+Import Libraries:
+
+python
+Copy code
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.metrics import classification_report
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.datasets import mnist
+import matplotlib.pyplot as plt
+import numpy as np
+LabelBinarizer: Used to convert categorical labels into one-hot encoded format.
+classification_report: For evaluating the performance of the model (precision, recall, F1-score).
+Sequential, Dense, Input: Keras components for building and training the neural network.
+SGD: Stochastic Gradient Descent optimizer for training the model.
+mnist: The MNIST dataset, which contains handwritten digits, is used for training and testing.
+matplotlib.pyplot: For plotting graphs to visualize the training loss and accuracy.
+numpy: For numerical operations, particularly with arrays.
+Load and Preprocess the MNIST Dataset:
+
+python
+Copy code
+((X_train, Y_train), (X_test, Y_test)) = mnist.load_data()
+X_train = X_train.reshape((X_train.shape[0], 28 * 28)).astype("float32") / 255.0
+X_test = X_test.reshape((X_test.shape[0], 28 * 28)).astype("float32") / 255.0
+Loading MNIST Dataset: The mnist.load_data() function loads the training and testing datasets (X_train, Y_train for training and X_test, Y_test for testing).
+Preprocessing:
+Reshapes the images into 1D arrays (784 features per image since each image is 28x28 pixels).
+Converts the pixel values to float32 type and scales them to the range [0, 1] by dividing by 255 (standard practice for image normalization).
+Convert Labels to One-Hot Encoding:
+
+python
+Copy code
+lb = LabelBinarizer()
+Y_train = lb.fit_transform(Y_train)
+Y_test = lb.transform(Y_test)
+One-Hot Encoding: The LabelBinarizer transforms the integer labels (0-9) into binary vectors (one-hot encoding) suitable for training the neural network. For example, label 5 becomes [0, 0, 0, 0, 0, 1, 0, 0, 0, 0].
+Build the Neural Network Model:
+
+python
+Copy code
+model = Sequential()
+model.add(Input(shape=(784,)))  # Specify input shape here using Input layer
+model.add(Dense(128, activation="sigmoid"))
+model.add(Dense(64, activation="sigmoid"))
+model.add(Dense(10, activation="softmax"))
+Model Type: A Sequential model is used, which represents a linear stack of layers.
+Input Layer: The first layer uses Input to specify the input shape, which is (784,) (flattened 28x28 image).
+Hidden Layers: Two Dense layers with 128 and 64 neurons respectively, both using the sigmoid activation function. This function outputs values between 0 and 1, useful for binary classification (though it's used here as an activation).
+Output Layer: The final Dense layer has 10 neurons (one for each class 0-9) with softmax activation to output a probability distribution across the 10 classes.
+Compile the Model:
+
+python
+Copy code
+sgd = SGD(0.01)
+model.compile(loss="categorical_crossentropy", optimizer=sgd, metrics=["accuracy"])
+Loss Function: categorical_crossentropy is used since it's a multi-class classification problem.
+Optimizer: SGD (Stochastic Gradient Descent) with a learning rate of 0.01.
+Metrics: The model will track accuracy during training.
+Train the Model:
+
+python
+Copy code
+epochs = 10
+H = model.fit(X_train, Y_train, validation_data=(X_test, Y_test), epochs=epochs, batch_size=128)
+The model is trained for 10 epochs with a batch size of 128.
+validation_data is used to evaluate the model's performance on the test set after each epoch.
+H contains the history of the training process (including loss and accuracy).
+Evaluate the Model:
+
+python
+Copy code
+predictions = model.predict(X_test, batch_size=128)
+print(classification_report(Y_test.argmax(axis=1), predictions.argmax(axis=1), target_names=[str(x) for x in lb.classes_]))
+The model's predictions are computed for the test set.
+classification_report is used to print a detailed report with precision, recall, and F1-score for each class (digits 0-9).
+argmax(axis=1) is used to convert one-hot encoded vectors back into integer labels for comparison.
+Plot Training Loss and Accuracy:
+
+python
+Copy code
+plt.style.use("ggplot")
+plt.figure()
+plt.plot(np.arange(0, epochs), H.history["loss"], label="train_loss")
+plt.plot(np.arange(0, epochs), H.history["val_loss"], label="val_loss")
+plt.plot(np.arange(0, epochs), H.history["accuracy"], label="train_acc")
+plt.plot(np.arange(0, epochs), H.history["val_accuracy"], label="val_acc")
+plt.title("Training Loss and Accuracy")
+plt.xlabel("Epoch #")
+plt.ylabel("Loss/Accuracy")
+plt.legend()
+plt.show()
+This section visualizes the training and validation loss, as well as the training and validation accuracy over the epochs. The ggplot style is used to make the plot visually appealing.
+Theory for Preparation:
+This assignment focuses on building a simple neural network to classify the MNIST dataset, which is a common introductory dataset for machine learning and deep learning.
+
+Key Concepts:
+Feedforward Neural Networks:
+
+These are the simplest type of neural networks, where information flows in one direction (from input to output).
+They consist of an input layer, one or more hidden layers, and an output layer. Each layer is fully connected to the next layer, hence the name "fully connected" or "dense" layers.
+Activation Functions:
+
+Sigmoid: Squashes the input into the range [0, 1]. It's commonly used for binary classification, but here it’s used in the hidden layers.
+Softmax: Used in the output layer of multi-class classification problems. It converts the output to a probability distribution (summing to 1).
+Loss Function:
+
+Categorical Cross-Entropy: A common loss function used for multi-class classification problems. It measures the difference between the predicted probabilities and the actual labels.
+Optimizer:
+
+SGD (Stochastic Gradient Descent): An optimization algorithm used to minimize the loss function by adjusting the weights of the neural network. The learning rate (0.01 in this case) controls how big the updates to the weights are.
+Metrics:
+
+Accuracy: The percentage of correct predictions made by the model. This is the most commonly used metric for classification tasks.
+Evaluation:
+
+After training the model, it's important to evaluate its performance using various metrics, such as precision, recall, and F1-score (which is done using classification_report).
+Summary:
+In this assignment, you built a neural network model for classifying handwritten digits (MNIST) using Keras and TensorFlow. You preprocessed the data, converted labels to one-hot encoding, and trained the model using stochastic gradient descent. The model’s performance was evaluated using a classification report and visualized with training and validation loss/accuracy plots.
