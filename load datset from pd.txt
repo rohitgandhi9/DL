@@ -1,0 +1,84 @@
+If you have the MNIST or CIFAR-10 dataset stored locally as CSV or other structured files, you can load them using pandas for preprocessing and then convert them into TensorFlow or PyTorch formats for model training. Below is sample code to load local data using pandas:
+
+1. Loading the MNIST Dataset from CSV Files Locally
+Assume the dataset consists of two files:
+
+train.csv (with label and pixel columns)
+test.csv
+python
+Copy code
+import pandas as pd
+import numpy as np
+from tensorflow.keras.utils import to_categorical
+
+# Load the dataset from CSV files
+train_data = pd.read_csv('path/to/train.csv')
+test_data = pd.read_csv('path/to/test.csv')
+
+# Separate features and labels
+X_train = train_data.drop(columns=['label']).values.reshape(-1, 28, 28, 1) / 255.0  # Normalize pixel values
+y_train = to_categorical(train_data['label'].values, num_classes=10)
+
+X_test = test_data.drop(columns=['label']).values.reshape(-1, 28, 28, 1) / 255.0
+y_test = to_categorical(test_data['label'].values, num_classes=10)
+2. Loading the CIFAR-10 Dataset from Local Files
+For CIFAR-10, if each image is stored separately, you’ll need an image processing library like cv2 or PIL:
+
+python
+Copy code
+import os
+import numpy as np
+from PIL import Image
+from tensorflow.keras.utils import to_categorical
+
+# Assuming CIFAR-10 images are in folders for each class, e.g., 'dataset/cifar10/train/class_0', 'dataset/cifar10/test/class_1', etc.
+def load_images_from_folder(folder_path, label):
+    images = []
+    labels = []
+    for filename in os.listdir(folder_path):
+        img = Image.open(os.path.join(folder_path, filename))
+        img = img.resize((32, 32))  # CIFAR-10 size
+        images.append(np.array(img))
+        labels.append(label)
+    return images, labels
+
+X_train, y_train = [], []
+for i in range(10):  # CIFAR-10 has 10 classes
+    images, labels = load_images_from_folder(f'path/to/train/class_{i}', i)
+    X_train.extend(images)
+    y_train.extend(labels)
+
+X_train = np.array(X_train) / 255.0  # Normalize
+y_train = to_categorical(np.array(y_train), num_classes=10)
+In these cases, replace paths as needed and adjust the image size if working with a different dataset. This setup allows for training even without an internet connection.
+
+
+
+
+simple one-
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+import tensorflow as tf
+
+# Load MNIST dataset from local CSV file
+# Replace 'mnist.csv' with the path to your local CSV file
+data = pd.read_csv('mnist.csv')
+
+# Split data into features (X) and labels (y)
+X = data.drop(columns=['label']).values  # Assuming 'label' is the column name for labels
+y = data['label'].values
+
+# Normalize pixel values to be between 0 and 1
+X = X / 255.0
+X = X.reshape(-1, 28, 28, 1)  # Reshape for CNN input if needed
+
+# Split data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Convert labels to categorical format (one-hot encoding)
+y_train = tf.keras.utils.to_categorical(y_train, num_classes=10)
+y_test = tf.keras.utils.to_categorical(y_test, num_classes=10)
+
+# Now X_train, X_test, y_train, y_test are ready for model training
